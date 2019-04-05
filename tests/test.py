@@ -1,0 +1,86 @@
+import pytest
+import os
+import re
+import sys
+import subprocess
+
+import bam_processing as bp
+
+INPUT_BAM = 'tests/data/test.bam'
+REFERENCE_FASTA = 'tests/data/test.fa'
+KNOWN_SITES_VCF_GZ = 'tests/data/test.vcf.gz'
+
+def test_create_sorted_bam():
+    output_fp = bp.create_sorted_bam(INPUT_BAM)
+
+def test_index_bam():
+    # sort so you can index
+    output_fp = bp.create_sorted_bam(INPUT_BAM)
+
+    bp.index_bam(output_fp)
+
+    assert os.path.isfile(INPUT_BAM + '.bai')
+
+def test_index_reference():
+    bp.index_reference(REFERENCE_FASTA)
+
+    assert os.path.isfile(REFERENCE_FASTA + '.fai')
+
+def test_create_sequence_dict():
+    bp.create_reference_sequence_dict(REFERENCE_FASTA)
+
+    assert os.path.isfile(re.sub(r'.[^.]*$', '.dict', REFERENCE_FASTA))
+
+def test_index_vcf():
+    bp.index_vcf(KNOWN_SITES_VCF_GZ)
+
+    assert os.path.isfile(KNOWN_SITES_VCF_GZ + '.tbi')
+
+def test_add_or_replace_read_groups():
+    bp.run_add_or_replace_read_groups(input_fp=INPUT_BAM, output_fp='output.bam')
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    assert 'RG:Z:id' in output 
+
+def test_mark_duplicates():
+    bp.run_mark_duplicates(input_fp=INPUT_BAM, output_fp='output.bam')
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    
+    assert 'PG:Z:MarkDuplicates' in output 
+
+def test_base_recalibration():
+    bp.run_base_recalibration(INPUT_BAM, 'output.bam', REFERENCE_FASTA, KNOWN_SITES_VCF_GZ)
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    
+    assert 'ID:GATK ApplyBQSR' in output
+
+def test_simple_processing():
+    bp.run_basic_preprocessing(INPUT_BAM, 'output.bam', REFERENCE_FASTA, KNOWN_SITES_VCF_GZ)
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    
+    assert 'ID:GATK ApplyBQSR' in output
+
+def test_standard_cli():
+    tool_args = ('python', 'bam_processing/bam_processing_cli.py',
+            '--reference-fasta', REFERENCE_FASTA,
+            '--known-sites', KNOWN_SITES_VCF_GZ,
+            '--output', 'output.bam',
+            INPUT_BAM)
+    subprocess.check_output(tool_args)
+
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    
+    assert 'ID:GATK ApplyBQSR' in output
+
+# def test_together():
+#     tool_args = bp.add_or_replace_read_groups(input_fp=INPUT_BAM)
+#     add_replace_process = subprocess.Popen(tool_args, stdout=subprocess.PIPE)
+# 
+#     tool_args = bp.mark_duplicates()
+#     mark_duplicates_process = subprocess.Popen(tool_args, stdin=add_replace_process.stdout, stdout=subprocess.PIPE)
+# 
+#     output = subprocess.check_output(('samtools', 'view', '-h'), stdin=mark_duplicates_process.stdout).decode('utf-8')
+# 
+#     add_replace_process.wait()
+#     mark_duplicates_process.wait()
+# 
+#     assert 'PG:Z:MarkDuplicates' in output 

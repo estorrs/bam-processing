@@ -29,4 +29,6 @@ ENV PICARD="/miniconda/pkgs/picard-2.18.21-0/share/picard-2.18.21-0/picard.jar"
 COPY . /bam-processing
 WORKDIR /bam-processing
 
+RUN pip install -e /bam-processing/bam_processing
+
 CMD /bin/bash
