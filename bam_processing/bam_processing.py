@@ -78,7 +78,7 @@ def run_add_or_replace_read_groups(input_fp, output_fp):
 
     return output
 
-def mark_duplicates(input_fp='/dev/stdin', output_fp='/dev/stdout', max_records_in_ram=1000000,
+def mark_duplicates(input_fp='/dev/stdin', output_fp='/dev/stdout', max_records_in_ram=100000,
         metrics_fp='output.metrics'):
     tool_args = ('picard', 'MarkDuplicates',
             f'I={input_fp}',
