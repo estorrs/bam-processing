@@ -6,9 +6,10 @@ import subprocess
 
 import bam_processing as bp
 
-INPUT_BAM = 'tests/data/test.bam'
+INPUT_BAM = 'tests/data/test.2.bam'
 REFERENCE_FASTA = 'tests/data/test.fa'
 KNOWN_SITES_VCF_GZ = 'tests/data/test.vcf.gz'
+TEMP_FILES_DIR = os.getcwd()
 
 def test_create_sorted_bam():
     output_fp = bp.create_sorted_bam(INPUT_BAM)
@@ -47,17 +48,42 @@ def test_mark_duplicates():
     
     assert 'PG:Z:MarkDuplicates' in output 
 
+def test_properly_paired():
+    bp.run_properly_paired(INPUT_BAM, 'output.bam')
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+
+    assert True
+
+def test_fixmate():
+    bp.run_fixmates(INPUT_BAM, 'output.bam')
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+
+    assert True
+
+def test_fix_star_mapping_quality():
+    bp.run_fix_255_mapping_quality(INPUT_BAM, 'output.bam')
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+
+    assert '\t60\t' in output
+
 def test_base_recalibration():
     bp.run_base_recalibration(INPUT_BAM, 'output.bam', REFERENCE_FASTA, KNOWN_SITES_VCF_GZ)
     output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
     
-    assert 'ID:GATK ApplyBQSR' in output
+    assert 'ID:GATK ApplyBQSR' in output and '60' in output
 
 def test_simple_processing():
     bp.run_basic_preprocessing(INPUT_BAM, 'output.bam', REFERENCE_FASTA, KNOWN_SITES_VCF_GZ)
     output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
     
     assert 'ID:GATK ApplyBQSR' in output
+
+def test_simple_processing_with_extras():
+    bp.run_basic_preprocessing(INPUT_BAM, 'output.bam', REFERENCE_FASTA, KNOWN_SITES_VCF_GZ,
+            properly_paired_only=True, fixmates=True, fix_255_mapping_quality=True)
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    
+    assert 'ID:GATK ApplyBQSR' in output and '\t60\t' in output
 
 def test_standard_cli():
     tool_args = ('python', 'bam_processing/bam_processing_cli.py',
@@ -70,6 +96,20 @@ def test_standard_cli():
     output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
     
     assert 'ID:GATK ApplyBQSR' in output
+
+def test_standard_cli_with_extras():
+    tool_args = ('python', 'bam_processing/bam_processing_cli.py',
+            '--reference-fasta', REFERENCE_FASTA,
+            '--known-sites', KNOWN_SITES_VCF_GZ,
+            '--temp-files-dir', TEMP_FILES_DIR,
+            '--fixmate', '--properly-paired-only', '--fix-255-mapping-quality',
+            '--output', 'output.bam',
+            INPUT_BAM)
+    subprocess.check_output(tool_args)
+
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    
+    assert 'ID:GATK ApplyBQSR' in output and '\t60\t' in output
 
 # def test_together():
 #     tool_args = bp.add_or_replace_read_groups(input_fp=INPUT_BAM)

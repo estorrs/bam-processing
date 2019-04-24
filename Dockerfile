@@ -23,6 +23,10 @@ ENV PATH="$PATH:/gatk-4.0.12.0/"
 # make sure we have java 8. gatk needs 8
 RUN conda install -y -c cyclus java-jdk
 
+# install jvarkit
+RUN git clone "https://github.com/lindenb/jvarkit.git" && cd jvarkit \
+    && ./gradlew biostar154220 && ./gradlew sortsamrefname && cd ..
+
 # create environmental variable for picard jar
 ENV PICARD="/miniconda/pkgs/picard-2.18.21-0/share/picard-2.18.21-0/picard.jar"
 
