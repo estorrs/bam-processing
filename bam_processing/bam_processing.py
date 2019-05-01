@@ -118,8 +118,8 @@ def run_split_n_cigar_reads(input_fp, output_fp, reference_fp,
     return output
 
 def mark_duplicates(input_fp='/dev/stdin', output_fp='/dev/stdout', max_records_in_ram=100000,
-        temp_dir='temp_dir', metrics_fp='output.metrics'):
-    tool_args = ('picard', 'MarkDuplicates',
+        temp_dir='temp_dir', metrics_fp='output.metrics', max_mem='1g'):
+    tool_args = ('picard', '-Xmx' + max_mem, 'MarkDuplicates',
             f'I={input_fp}',
             f'O={output_fp}',
             f'MAX_RECORDS_IN_RAM={max_records_in_ram}',
@@ -129,7 +129,7 @@ def mark_duplicates(input_fp='/dev/stdin', output_fp='/dev/stdout', max_records_
 
     return tool_args
 
-def run_mark_duplicates(input_fp, output_fp, temp_files_dir=os.getcwd()):
+def run_mark_duplicates(input_fp, output_fp, temp_files_dir=os.getcwd(), max_mem='1g'):
     # sort and index if needed
     sorted_input_fp = create_sorted_bam(input_fp, temp_files_dir=temp_files_dir)
     index_bam(sorted_input_fp)
@@ -138,7 +138,7 @@ def run_mark_duplicates(input_fp, output_fp, temp_files_dir=os.getcwd()):
     os.mkdir(temp_dir)
 
     tool_args = mark_duplicates(input_fp=sorted_input_fp, output_fp=output_fp,
-            temp_dir=temp_dir, metrics_fp=metrics_fp)
+            temp_dir=temp_dir, metrics_fp=metrics_fp, max_mem=max_mem)
     output = subprocess.check_output(tool_args).decode('utf-8')
 
     os.remove(metrics_fp)
@@ -234,7 +234,8 @@ def run_fix_255_mapping_quality(input_fp, output_fp):
     ps_2.wait()
     ps_3.wait()
 
-def run_cptac3_preprocessing(input_fp, output_fp, reference_fp, temp_files_dir=os.getcwd()):
+def run_cptac3_preprocessing(input_fp, output_fp, reference_fp, temp_files_dir=os.getcwd(),
+        max_mem='1g'):
     # sort and add readgroups
     read_group_output = os.path.join(temp_files_dir, f'read_groups.{str(uuid.uuid4())}.bam')
     run_add_or_replace_read_groups(input_fp, read_group_output,
@@ -243,7 +244,7 @@ def run_cptac3_preprocessing(input_fp, output_fp, reference_fp, temp_files_dir=o
     # mark duplicates
     mark_duplicates_output = os.path.join(temp_files_dir, f'mark_duplicates.{str(uuid.uuid4())}.bam')
     run_mark_duplicates(read_group_output, mark_duplicates_output,
-            temp_files_dir=temp_files_dir)
+            temp_files_dir=temp_files_dir, max_mem=max_mem)
     # remove temp output
     os.remove(read_group_output)
     os.remove(read_group_output + '.bai')
