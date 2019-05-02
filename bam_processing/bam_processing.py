@@ -122,6 +122,7 @@ def mark_duplicates(input_fp='/dev/stdin', output_fp='/dev/stdout', max_records_
     tool_args = ('picard', '-Xmx' + max_mem, 'MarkDuplicates',
             f'I={input_fp}',
             f'O={output_fp}',
+            f'ASSUME_SORT_ORDER=coordinate',
             f'MAX_RECORDS_IN_RAM={max_records_in_ram}',
             'VALIDATION_STRINGENCY=SILENT',
             f'TMP_DIR={temp_dir}',
