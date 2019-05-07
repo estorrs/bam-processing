@@ -263,6 +263,46 @@ def run_cptac3_preprocessing(input_fp, output_fp, reference_fp, temp_files_dir=o
     index_bam(sorted_output)
     shutil.move(sorted_output, output_fp)
 
+def run_cptac2_prospective_preprocessing(input_fp, output_fp, reference_fp, temp_files_dir=os.getcwd(),
+        max_mem='1g'):
+
+    fixmates_output = os.path.join(temp_files_dir, f'fixmates.{str(uuid.uuid4())}.bam')
+    run_fixmates(input_fp, fixmates_output, temp_files_dir=temp_files_dir)
+
+    properly_paired_output = os.path.join(temp_files_dir, f'paired.{str(uuid.uuid4())}.bam')
+    run_properly_paired(fixmates_output, properly_paired_output, temp_files_dir=temp_files_dir)
+    # remove temp output
+    os.remove(fixmates_output)
+
+    # sort and add readgroups
+    read_group_output = os.path.join(temp_files_dir, f'read_groups.{str(uuid.uuid4())}.bam')
+    run_add_or_replace_read_groups(properly_paired_output, read_group_output,
+            temp_files_dir=temp_files_dir)
+    # remove temp output
+    os.remove(properly_paired_output)
+    os.remove(properly_paired_output + '.bai')
+
+    # mark duplicates
+    mark_duplicates_output = os.path.join(temp_files_dir, f'mark_duplicates.{str(uuid.uuid4())}.bam')
+    run_mark_duplicates(read_group_output, mark_duplicates_output,
+            temp_files_dir=temp_files_dir, max_mem=max_mem)
+    # remove temp output
+    os.remove(read_group_output)
+    os.remove(read_group_output + '.bai')
+
+    # split n cigar reads
+    split_output = os.path.join(temp_files_dir, f'split.{str(uuid.uuid4())}.bam')
+    run_split_n_cigar_reads(mark_duplicates_output, output_fp, reference_fp,
+            temp_files_dir=temp_files_dir)
+    # remove temp output
+    os.remove(mark_duplicates_output)
+    os.remove(mark_duplicates_output + '.bai')
+    os.remove(output_fp.replace('.bam', '.bai'))
+
+    sorted_output = create_sorted_bam(output_fp, temp_files_dir=temp_files_dir)
+    index_bam(sorted_output)
+    shutil.move(sorted_output, output_fp)
+
 def run_basic_preprocessing(input_fp, output_fp, reference_fp, known_sites_fp,
         properly_paired_only=False, fixmates=False, temp_files_dir=os.getcwd(),
         fix_255_mapping_quality=False):

@@ -85,6 +85,12 @@ def test_cptac3_processing():
     
     assert True
 
+def test_cptac2_prospective_processing():
+    bp.run_cptac2_prospective_preprocessing(INPUT_BAM, 'output.bam', REFERENCE_FASTA)
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    
+    assert True
+
 def test_standard_cli():
     tool_args = ('python', 'bam_processing/bam_processing_cli.py',
             '--workflow-type', 'cptac3',
