@@ -47,6 +47,13 @@ def run_cptac3_workflow(input_bam, output_bam, reference_fasta, temp_files_dir, 
         bp.run_cptac3_preprocessing(input_bam, output_bam, reference_fasta, max_mem=max_memory,
                 temp_files_dir=temp_files_dir)
 
+def run_cptac2_workflow(input_bam, output_bam, reference_fasta, temp_files_dir, max_memory):
+    if temp_files_dir is None:
+        bp.run_cptac2_preprocessing(input_bam, output_bam, reference_fasta, max_mem=max_memory)
+    else:
+        bp.run_cptac2_preprocessing(input_bam, output_bam, reference_fasta, max_mem=max_memory,
+                temp_files_dir=temp_files_dir)
+
 def main():
     if args.workflow_type == 'standard':
         run_standard_workflow(args.input_bam, args.output, args.reference_fasta, args.known_sites,
@@ -54,6 +61,9 @@ def main():
                 args.temp_files_dir)
     elif args.workflow_type == 'cptac3':
         run_cptac3_workflow(args.input_bam, args.output, args.reference_fasta, args.temp_files_dir,
+                args.max_memory)
+    elif args.workflow_type == 'cptac2':
+        run_cptac2_workflow(args.input_bam, args.output, args.reference_fasta, args.temp_files_dir,
                 args.max_memory)
     else:
         raise ValueError('must specify correct workflow')

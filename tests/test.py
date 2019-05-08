@@ -85,13 +85,13 @@ def test_cptac3_processing():
     
     assert True
 
-def test_cptac2_prospective_processing():
-    bp.run_cptac2_prospective_preprocessing(INPUT_BAM, 'output.bam', REFERENCE_FASTA)
+def test_cptac2_processing():
+    bp.run_cptac2_preprocessing(INPUT_BAM, 'output.bam', REFERENCE_FASTA)
     output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
     
     assert True
 
-def test_standard_cli():
+def test_cptac3_cli():
     tool_args = ('python', 'bam_processing/bam_processing_cli.py',
             '--workflow-type', 'cptac3',
             '--max-memory', '1g',
@@ -102,8 +102,21 @@ def test_standard_cli():
 
     output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
     
-#    assert 'ID:GATK ApplyBQSR' in output
     assert True
+
+def test_cptac2_cli():
+    tool_args = ('python', 'bam_processing/bam_processing_cli.py',
+            '--workflow-type', 'cptac2',
+            '--max-memory', '1g',
+            '--reference-fasta', REFERENCE_FASTA,
+            '--output', 'output.bam',
+            INPUT_BAM)
+    subprocess.check_output(tool_args)
+
+    output = subprocess.check_output(('samtools', 'view', '-h', 'output.bam')).decode('utf-8')
+    
+    assert True
+#    assert False
 
 # def test_simple_processing():
 #     bp.run_basic_preprocessing(INPUT_BAM, 'output.bam', REFERENCE_FASTA, KNOWN_SITES_VCF_GZ)

@@ -1,8 +1,11 @@
+import logging
 import os
 import re
 import shutil
 import subprocess
 import uuid
+
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 def create_sorted_bam(bam_fp, output_fp=None, name_sorted=False, max_memory='10G',
         temp_files_dir=os.getcwd(), use_temp_for_output=True):
@@ -43,11 +46,13 @@ def create_sorted_bam(bam_fp, output_fp=None, name_sorted=False, max_memory='10G
 def index_bam(bam_fp):
     """index the given bam if it is not already"""
     if not os.path.isfile(f'{bam_fp}.bai'):
+        logging.info('indexing bam')
         tool_args = ('samtools', 'index', bam_fp)
         subprocess.check_output(tool_args)
 
 def index_reference(reference_fp):
     if not os.path.isfile(f'{reference_fp}.fai'):
+        logging.info('indexing reference')
         tool_args = ('samtools', 'faidx', reference_fp)
         subprocess.check_output(tool_args)
 
@@ -56,6 +61,7 @@ def create_reference_sequence_dict(reference_fp):
 
     output_fp = re.sub(r'.[^.]*$', '.dict', reference_fp)
     if not os.path.isfile(output_fp):
+        logging.info('creating reference sequence dictionary')
         tool_args = ('picard', 'CreateSequenceDictionary',
                 f'R={reference_fp}',
                 'O=' + output_fp,
@@ -83,6 +89,8 @@ def run_add_or_replace_read_groups(input_fp, output_fp, temp_files_dir=os.getcwd
     index_bam(sorted_input_fp)
 
     tool_args = add_or_replace_read_groups(input_fp=sorted_input_fp, output_fp=output_fp)
+    logging.info('running add or replace read groups')
+    logging.info(f'executing command: {tool_args}')
     output = subprocess.check_output(tool_args).decode('utf-8')
 
     if sorted_input_fp != input_fp:
@@ -109,6 +117,8 @@ def run_split_n_cigar_reads(input_fp, output_fp, reference_fp,
     index_reference(reference_fp)
 
     tool_args = split_n_cigar_reads(reference_fp, input_fp=sorted_input_fp, output_fp=output_fp)
+    logging.info('running split n cigar reads')
+    logging.info(f'executing command: {tool_args}')
     output = subprocess.check_output(tool_args).decode('utf-8')
 
     if sorted_input_fp != input_fp:
@@ -140,6 +150,8 @@ def run_mark_duplicates(input_fp, output_fp, temp_files_dir=os.getcwd(), max_mem
 
     tool_args = mark_duplicates(input_fp=sorted_input_fp, output_fp=output_fp,
             temp_dir=temp_dir, metrics_fp=metrics_fp, max_mem=max_mem)
+    logging.info('running mark duplicates')
+    logging.info(f'executing command: {tool_args}')
     output = subprocess.check_output(tool_args).decode('utf-8')
 
     os.remove(metrics_fp)
@@ -203,13 +215,16 @@ def run_fixmates(input_fp, output_fp, temp_files_dir=os.getcwd()):
     sorted_input_fp = create_sorted_bam(input_fp, name_sorted=True, temp_files_dir=temp_files_dir)
 
     tool_args = fixmates(input_fp=sorted_input_fp, output_fp=output_fp)
+    logging.info('running fixmates')
+    logging.info(f'executing command: {tool_args}')
     subprocess.check_output(tool_args)
 
     if sorted_input_fp != input_fp:
         os.remove(sorted_input_fp)
 
 def properly_paired(input_fp='/dev/stdin', output_fp='/dev/stdout'):
-    tool_args = ('samtools', 'view', '-h', '-f', '0x2', '-o', output_fp, input_fp)
+    tool_args = ('samtools', 'view', '-h', '-f', '0x2', '-F', '0x4', '-F', '0x8', '-F', '0x100',
+            '-F', '0x200', '-F', '0x800', '-o', output_fp, input_fp)
 
     return tool_args
 
@@ -219,6 +234,8 @@ def run_properly_paired(input_fp, output_fp, temp_files_dir=os.getcwd()):
     index_bam(sorted_input_fp)
 
     tool_args = properly_paired(input_fp=sorted_input_fp, output_fp=output_fp)
+    logging.info('running properly paired')
+    logging.info(f'executing command: {tool_args}')
     subprocess.check_output(tool_args)
 
     if sorted_input_fp != input_fp:
@@ -263,7 +280,7 @@ def run_cptac3_preprocessing(input_fp, output_fp, reference_fp, temp_files_dir=o
     index_bam(sorted_output)
     shutil.move(sorted_output, output_fp)
 
-def run_cptac2_prospective_preprocessing(input_fp, output_fp, reference_fp, temp_files_dir=os.getcwd(),
+def run_cptac2_preprocessing(input_fp, output_fp, reference_fp, temp_files_dir=os.getcwd(),
         max_mem='1g'):
 
     fixmates_output = os.path.join(temp_files_dir, f'fixmates.{str(uuid.uuid4())}.bam')
@@ -272,32 +289,32 @@ def run_cptac2_prospective_preprocessing(input_fp, output_fp, reference_fp, temp
     properly_paired_output = os.path.join(temp_files_dir, f'paired.{str(uuid.uuid4())}.bam')
     run_properly_paired(fixmates_output, properly_paired_output, temp_files_dir=temp_files_dir)
     # remove temp output
-    os.remove(fixmates_output)
+    #os.remove(fixmates_output)
 
     # sort and add readgroups
     read_group_output = os.path.join(temp_files_dir, f'read_groups.{str(uuid.uuid4())}.bam')
     run_add_or_replace_read_groups(properly_paired_output, read_group_output,
             temp_files_dir=temp_files_dir)
     # remove temp output
-    os.remove(properly_paired_output)
-    os.remove(properly_paired_output + '.bai')
+    #os.remove(properly_paired_output)
+    #os.remove(properly_paired_output + '.bai')
 
     # mark duplicates
     mark_duplicates_output = os.path.join(temp_files_dir, f'mark_duplicates.{str(uuid.uuid4())}.bam')
     run_mark_duplicates(read_group_output, mark_duplicates_output,
             temp_files_dir=temp_files_dir, max_mem=max_mem)
     # remove temp output
-    os.remove(read_group_output)
-    os.remove(read_group_output + '.bai')
+    #os.remove(read_group_output)
+    #os.remove(read_group_output + '.bai')
 
     # split n cigar reads
     split_output = os.path.join(temp_files_dir, f'split.{str(uuid.uuid4())}.bam')
     run_split_n_cigar_reads(mark_duplicates_output, output_fp, reference_fp,
             temp_files_dir=temp_files_dir)
     # remove temp output
-    os.remove(mark_duplicates_output)
-    os.remove(mark_duplicates_output + '.bai')
-    os.remove(output_fp.replace('.bam', '.bai'))
+#     os.remove(mark_duplicates_output)
+#     os.remove(mark_duplicates_output + '.bai')
+#     os.remove(output_fp.replace('.bam', '.bai'))
 
     sorted_output = create_sorted_bam(output_fp, temp_files_dir=temp_files_dir)
     index_bam(sorted_output)
